@@ -1,0 +1,2 @@
+# File: requirements.txt
+streamlit==1.31.0
