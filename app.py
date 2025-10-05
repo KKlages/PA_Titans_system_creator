@@ -308,7 +308,7 @@ if 'generated_systems' in st.session_state:
                                format_func=lambda x: st.session_state.generated_systems[x]['name'],
                                key="download_select")
             sys_obj = st.session_state.generated_systems[sel]
-            json_str = json.dumps([sys_obj], indent=2)  # wrap in array
+            json_str = json.dumps(sys_obj, indent=2)  # no array wrapper
             filename = f"{sanitize_filename(sys_obj['name'])}.pas"
             st.download_button(
                 label=f"⬇️ Download {sys_obj['name']}",
@@ -317,6 +317,7 @@ if 'generated_systems' in st.session_state:
                 mime="application/json",
                 use_container_width=True
             )
+
 
 # Footer / Installation note
 st.markdown("---")
