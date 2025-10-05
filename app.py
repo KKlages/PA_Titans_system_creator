@@ -36,22 +36,29 @@ def generate_system(
     }
     
     # Create 2 starting planets (symmetrically positioned on opposite sides)
-    # They'll be on opposite sides of the orbit for stability
     orbital_radius = 25000
-    orbital_velocity = 150  # Tangential velocity for circular orbit
+    orbital_velocity = 150
     
     for i in range(2):
-        # Position planets on opposite sides (180 degrees apart)
-        angle = math.pi * i  # 0 for first planet, π for second planet
+        # Simple positioning: opposite sides on X-axis only
+        if i == 0:
+            pos_x = orbital_radius
+            pos_y = 0
+            vel_x = 0
+            vel_y = orbital_velocity
+        else:
+            pos_x = -orbital_radius
+            pos_y = 0
+            vel_x = 0
+            vel_y = -orbital_velocity
         
         planet = {
             "name": f"Starting Planet {i+1}",
             "mass": 10000,
-            "position_x": orbital_radius * math.cos(angle),
-            "position_y": orbital_radius * math.sin(angle),
-            # Velocity perpendicular to radius for circular orbit
-            "velocity_x": -orbital_velocity * math.sin(angle),
-            "velocity_y": orbital_velocity * math.cos(angle),
+            "position_x": pos_x,
+            "position_y": pos_y,
+            "velocity_x": vel_x,
+            "velocity_y": vel_y,
             "required_thrust_to_move": 0,
             "starting_planet": True,
             "respawn": False,
@@ -65,7 +72,7 @@ def generate_system(
                 "waterHeight": 0,
                 "waterDepth": 0,
                 "temperature": 50,
-                "metalDensity": starting_planet_metal,  # Exact same value for both
+                "metalDensity": starting_planet_metal,
                 "metalClusters": 50,
                 "biomeScale": 50,
                 "biome": "earth"
@@ -83,17 +90,22 @@ def generate_system(
         angle = random.uniform(0, 2 * math.pi)
         distance = random.randint(35000, 50000)
         
-        # Calculate orbital velocity for the distance (simplified)
+        # Calculate position
+        pos_x = int(distance * math.cos(angle))
+        pos_y = int(distance * math.sin(angle))
+        
+        # Calculate orbital velocity
         orbital_vel = random.uniform(80, 120)
+        vel_x = int(-orbital_vel * math.sin(angle) + random.uniform(-20, 20))
+        vel_y = int(orbital_vel * math.cos(angle) + random.uniform(-20, 20))
         
         planet = {
             "name": f"Resource Planet {i+1}",
             "mass": 5000,
-            "position_x": distance * math.cos(angle),
-            "position_y": distance * math.sin(angle),
-            # Velocity perpendicular to radius for more stable orbits
-            "velocity_x": -orbital_vel * math.sin(angle) + random.uniform(-20, 20),
-            "velocity_y": orbital_vel * math.cos(angle) + random.uniform(-20, 20),
+            "position_x": pos_x,
+            "position_y": pos_y,
+            "velocity_x": vel_x,
+            "velocity_y": vel_y,
             "required_thrust_to_move": 0,
             "starting_planet": False,
             "respawn": False,
