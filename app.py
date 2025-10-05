@@ -104,7 +104,7 @@ def generate_system(
                 "metalDensity": starting_planet_metal,
                 "metalClusters": 50,
                 "biomeScale": 50,
-                "biome": "earth"
+                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal"])
             }
         }
         system["planets"].append(planet)
@@ -148,7 +148,7 @@ def generate_system(
                 "metalDensity": metal_amount,
                 "metalClusters": 40,
                 "biomeScale": 50,
-                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical"])
+                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal"])
             }
         }
         system["planets"].append(planet)
