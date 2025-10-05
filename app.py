@@ -5,7 +5,6 @@ import random
 import io
 import zipfile
 from datetime import datetime
-import math
 
 st.set_page_config(
     page_title="PA Titans System Generator",
@@ -35,30 +34,17 @@ def generate_system(
         "planets": []
     }
     
-    # Create 2 starting planets (symmetrically positioned on opposite sides)
-    orbital_radius = 25000
-    orbital_velocity = 150
-    
+    # Create 2 starting planets (symmetrically positioned)
     for i in range(2):
-        # Simple positioning: opposite sides on X-axis only
-        if i == 0:
-            pos_x = orbital_radius
-            pos_y = 0
-            vel_x = 0
-            vel_y = orbital_velocity
-        else:
-            pos_x = -orbital_radius
-            pos_y = 0
-            vel_x = 0
-            vel_y = -orbital_velocity
+        distance = 25000
         
         planet = {
             "name": f"Starting Planet {i+1}",
             "mass": 10000,
-            "position_x": pos_x,
-            "position_y": pos_y,
-            "velocity_x": vel_x,
-            "velocity_y": vel_y,
+            "position_x": distance * (1 if i == 0 else -1),
+            "position_y": 0,
+            "velocity_x": 0,
+            "velocity_y": 150 * (1 if i == 0 else -1),
             "required_thrust_to_move": 0,
             "starting_planet": True,
             "respawn": False,
@@ -86,26 +72,17 @@ def generate_system(
         metal_deviation = random.uniform(-0.1, 0.1)
         metal_amount = base_metal_value * (1 + metal_deviation)
         
-        # Position planets at varying distances and angles
-        angle = random.uniform(0, 2 * math.pi)
+        # Position planets at varying distances
+        angle = random.uniform(0, 6.28318)  # Random angle
         distance = random.randint(35000, 50000)
-        
-        # Calculate position
-        pos_x = int(distance * math.cos(angle))
-        pos_y = int(distance * math.sin(angle))
-        
-        # Calculate orbital velocity
-        orbital_vel = random.uniform(80, 120)
-        vel_x = int(-orbital_vel * math.sin(angle) + random.uniform(-20, 20))
-        vel_y = int(orbital_vel * math.cos(angle) + random.uniform(-20, 20))
         
         planet = {
             "name": f"Resource Planet {i+1}",
             "mass": 5000,
-            "position_x": pos_x,
-            "position_y": pos_y,
-            "velocity_x": vel_x,
-            "velocity_y": vel_y,
+            "position_x": distance * random.choice([1, -1]),
+            "position_y": distance * random.uniform(-0.5, 0.5),
+            "velocity_x": random.uniform(-100, 100),
+            "velocity_y": random.uniform(80, 120),
             "required_thrust_to_move": 0,
             "starting_planet": False,
             "respawn": False,
@@ -268,8 +245,6 @@ with col1:
     - Starting Planets: 2 (Radius: {starting_radius}, Metal: {starting_metal})
     - Additional Planets: {num_additional} (Radius: {additional_radius}, Metal: {base_metal} ±10%)
     - Total Systems: {num_systems}
-    - **Starting planets are positioned 180° apart for stable orbits**
-    - **Both starting planets have identical metal density**
     """)
 
 with col2:
@@ -334,8 +309,6 @@ if 'generated_systems' in st.session_state:
                         st.write(f"Metal Density: {planet['planet']['metalDensity']}")
                         st.write(f"Biome: {planet['planet']['biome']}")
                         st.write(f"Starting Planet: {planet.get('starting_planet', False)}")
-                        st.write(f"Position: ({planet['position_x']:.0f}, {planet['position_y']:.0f})")
-                        st.write(f"Velocity: ({planet['velocity_x']:.0f}, {planet['velocity_y']:.0f})")
             
             # Show full JSON
             with st.expander("View Full JSON"):
@@ -398,8 +371,7 @@ st.markdown("""
 ### 🔧 About
 
 This tool generates balanced star systems for Planetary Annihilation: Titans with:
-- Equal starting planets for fair competitive play (identical metal density)
-- Stable orbital mechanics (planets positioned 180° apart)
+- Equal starting planets for fair competitive play
 - Configurable resource planets with controlled variance
 - Easy bulk generation and download
 
