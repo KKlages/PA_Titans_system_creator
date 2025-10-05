@@ -5,6 +5,7 @@ import random
 import io
 import zipfile
 from datetime import datetime
+import math
 
 st.set_page_config(
     page_title="PA Titans System Generator",
@@ -34,17 +35,23 @@ def generate_system(
         "planets": []
     }
     
-    # Create 2 starting planets (symmetrically positioned)
+    # Create 2 starting planets (symmetrically positioned on opposite sides)
+    # They'll be on opposite sides of the orbit for stability
+    orbital_radius = 25000
+    orbital_velocity = 150  # Tangential velocity for circular orbit
+    
     for i in range(2):
-        distance = 25000
+        # Position planets on opposite sides (180 degrees apart)
+        angle = math.pi * i  # 0 for first planet, π for second planet
         
         planet = {
             "name": f"Starting Planet {i+1}",
             "mass": 10000,
-            "position_x": distance * (1 if i == 0 else -1),
-            "position_y": 0,
-            "velocity_x": 0,
-            "velocity_y": 150 * (1 if i == 0 else -1),
+            "position_x": orbital_radius * math.cos(angle),
+            "position_y": orbital_radius * math.sin(angle),
+            # Velocity perpendicular to radius for circular orbit
+            "velocity_x": -orbital_velocity * math.sin(angle),
+            "velocity_y": orbital_velocity * math.cos(angle),
             "required_thrust_to_move": 0,
             "starting_planet": True,
             "respawn": False,
@@ -58,7 +65,7 @@ def generate_system(
                 "waterHeight": 0,
                 "waterDepth": 0,
                 "temperature": 50,
-                "metalDensity": starting_planet_metal,
+                "metalDensity": starting_planet_metal,  # Exact same value for both
                 "metalClusters": 50,
                 "biomeScale": 50,
                 "biome": "earth"
@@ -72,17 +79,21 @@ def generate_system(
         metal_deviation = random.uniform(-0.1, 0.1)
         metal_amount = base_metal_value * (1 + metal_deviation)
         
-        # Position planets at varying distances
-        angle = random.uniform(0, 6.28318)  # Random angle
+        # Position planets at varying distances and angles
+        angle = random.uniform(0, 2 * math.pi)
         distance = random.randint(35000, 50000)
+        
+        # Calculate orbital velocity for the distance (simplified)
+        orbital_vel = random.uniform(80, 120)
         
         planet = {
             "name": f"Resource Planet {i+1}",
             "mass": 5000,
-            "position_x": distance * random.choice([1, -1]),
-            "position_y": distance * random.uniform(-0.5, 0.5),
-            "velocity_x": random.uniform(-100, 100),
-            "velocity_y": random.uniform(80, 120),
+            "position_x": distance * math.cos(angle),
+            "position_y": distance * math.sin(angle),
+            # Velocity perpendicular to radius for more stable orbits
+            "velocity_x": -orbital_vel * math.sin(angle) + random.uniform(-20, 20),
+            "velocity_y": orbital_vel * math.cos(angle) + random.uniform(-20, 20),
             "required_thrust_to_move": 0,
             "starting_planet": False,
             "respawn": False,
@@ -245,6 +256,8 @@ with col1:
     - Starting Planets: 2 (Radius: {starting_radius}, Metal: {starting_metal})
     - Additional Planets: {num_additional} (Radius: {additional_radius}, Metal: {base_metal} ±10%)
     - Total Systems: {num_systems}
+    - **Starting planets are positioned 180° apart for stable orbits**
+    - **Both starting planets have identical metal density**
     """)
 
 with col2:
@@ -309,6 +322,8 @@ if 'generated_systems' in st.session_state:
                         st.write(f"Metal Density: {planet['planet']['metalDensity']}")
                         st.write(f"Biome: {planet['planet']['biome']}")
                         st.write(f"Starting Planet: {planet.get('starting_planet', False)}")
+                        st.write(f"Position: ({planet['position_x']:.0f}, {planet['position_y']:.0f})")
+                        st.write(f"Velocity: ({planet['velocity_x']:.0f}, {planet['velocity_y']:.0f})")
             
             # Show full JSON
             with st.expander("View Full JSON"):
@@ -371,7 +386,8 @@ st.markdown("""
 ### 🔧 About
 
 This tool generates balanced star systems for Planetary Annihilation: Titans with:
-- Equal starting planets for fair competitive play
+- Equal starting planets for fair competitive play (identical metal density)
+- Stable orbital mechanics (planets positioned 180° apart)
 - Configurable resource planets with controlled variance
 - Easy bulk generation and download
 
