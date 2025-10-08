@@ -337,4 +337,56 @@ if 'generated_systems' in st.session_state:
             st.json({"name": system['name'], "description": system['description'], "total_planets": len(system['planets'])})
         with c2:
             st.markdown("**Planet Details**")
-            for p in syst
+            for p in system['planets']:
+                with st.expander(p['name']):
+                    st.write(f"Radius: {p['planet']['radius']}")
+                    st.write(f"Metal Density: {p['planet']['metalDensity']}")
+                    st.write(f"Biome: {p['planet']['biome']}")
+                    st.write(f"Starting Planet: {p.get('starting_planet', False)}")
+        with st.expander("View full JSON"):
+            st.json(system)
+
+    with tab2:
+        c1, c2 = st.columns(2)
+        with c1:
+            zip_buffer = create_zip_file(st.session_state.generated_systems)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            st.download_button(
+                label="📦 Download All Systems (ZIP)",
+                data=zip_buffer,
+                file_name=f"pa_titans_systems_{timestamp}.zip",
+                mime="application/zip",
+                use_container_width=True
+            )
+        with c2:
+            sel = st.selectbox("Download individual system", options=list(range(len(st.session_state.generated_systems))),
+                               format_func=lambda x: st.session_state.generated_systems[x]['name'],
+                               key="download_select")
+            sys_obj = st.session_state.generated_systems[sel]
+            # Wrap as an array (PA expects [system]) and provide .pas extension
+            json_str = json.dumps([sys_obj], indent=2)
+            filename = f"{sanitize_filename(sys_obj['name'])}.pas"
+            st.download_button(
+                label=f"⬇️ Download {sys_obj['name']}",
+                data=json_str,
+                file_name=filename,
+                mime="application/json",
+                use_container_width=True
+            )
+
+
+# Footer / Installation note
+st.markdown("---")
+st.markdown(
+    "### 📖 Installation Instructions\n\n"
+    "1. Download the ZIP and copy the extracted `generated_maps` folder into:\n"
+    "- Windows: `%LOCALAPPDATA%\\Uber Entertainment\\Planetary Annihilation\\server_mods\\`\n"
+    "- Linux: `~/.local/Uber Entertainment/Planetary Annihilation/server_mods/`\n"
+    "- Mac: `~/Library/Application Support/Uber Entertainment/Planetary Annihilation/server_mods/`\n\n"
+    "2. Launch PA Titans → Community Mods → Enable 'Generated Maps'.\n\n"
+    "Alternatively, for local single-system use you can copy a single `.pas` into your local systems folder\n"
+    "`ui/main_game/live_game/systems/` (game installs differ by platform).\n"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("Made with ❤️ for the PA Titans community")
