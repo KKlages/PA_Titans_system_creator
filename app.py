@@ -376,20 +376,20 @@ if 'generated_systems' in st.session_state:
                 mime="application/zip",
                 use_container_width=True
             )
-        with c2:
-            sel = st.selectbox("Download individual system", options=range(len(st.session_state.generated_systems)),
-                               format_func=lambda x: st.session_state.generated_systems[x]['name'],
-                               key="download_select")
-            sys_obj = st.session_state.generated_systems[sel]
-            json_str = json.dumps([sys_obj], indent=2)  # Wrap in array for PA
-            filename = f"{sanitize_filename(sys_obj['name'])}.pas"
-            st.download_button(
-                label=f"⬇️ Download {sys_obj['name']}",
-                data=json_str,
-                file_name=filename,
-                mime="application/json",
-                use_container_width=True
-            )
+    with c2:
+        sel = st.selectbox("Download individual system", options=range(len(st.session_state.generated_systems)),
+                        format_func=lambda x: st.session_state.generated_systems[x]['name'],
+                        key="download_select")
+        sys_obj = st.session_state.generated_systems[sel]
+        json_str = json.dumps(sys_obj, indent=2)  # ← REMOVED array wrapper
+        filename = f"{sanitize_filename(sys_obj['name'])}.pas"
+        st.download_button(
+            label=f"⬇️ Download {sys_obj['name']}",
+            data=json_str,
+            file_name=filename,
+            mime="application/json",
+            use_container_width=True
+        )
 
 
 # Footer / Installation note
