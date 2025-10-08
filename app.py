@@ -1,10 +1,10 @@
 # File: app.py
 """
-PA Titans System Generator (Streamlit) - Enhanced
+PA Titans System Generator (Streamlit)
 - Generates .pas system files (Planetary Annihilation: Titans)
 - Ensures each .pas contains a JSON array [system] (PA expects an array)
-- Non-overlapping orbits with fixed distance intervals
-- Perpendicular velocities for stable circular orbits
+- Distributes resource planets using polar coordinates and assigns
+  perpendicular velocities for more stable orbits.
 """
 import streamlit as st
 import json
@@ -24,38 +24,22 @@ def sanitize_filename(name: str) -> str:
     """Make a safe filename from a system name."""
     return "".join(c if c.isalnum() or c in (" ", "_", "-") else "_" for c in name).replace(" ", "_")
 
-def calculate_orbital_velocity(distance: float, mass: float = 10000) -> float:
+def perp_velocity(px: float, py: float, speed_scale: float = 1.0) -> (int, int):
     """
-    Calculate orbital velocity for circular orbit.
-    Uses simplified physics: v = sqrt(GM/r), scaled for PA.
+    Compute a velocity vector approximately perpendicular to the position vector.
+    This gives planets a tangential velocity which results in orbital-like motion.
+    speed_scale adjusts overall speed magnitude.
     """
-    if distance == 0:
-        return 0
-    # Scale factor tuned for PA Titans orbital mechanics
-    return 15000 / math.sqrt(distance)
-
-def perp_velocity(px: float, py: float, distance: float) -> tuple[int, int]:
-    """
-    Compute perpendicular velocity vector for circular orbit.
-    Returns velocity components that are tangent to the orbit.
-    """
-    if distance == 0:
-        return 0, 0
-    
-    # Calculate orbital speed based on distance
-    speed = calculate_orbital_velocity(distance)
-    
-    # Perpendicular direction (tangent to orbit)
-    # For position (px, py), perpendicular is (-py, px) normalized
-    magnitude = math.sqrt(px * px + py * py)
-    if magnitude == 0:
-        return 0, 0
-    
-    # Normalize and scale by orbital speed
-    vx = (-py / magnitude) * speed
-    vy = (px / magnitude) * speed
-    
-    return int(round(vx)), int(round(vy))
+    # Perpendicular to (px, py) is (-py, px) or (py, -px)
+    # Normalize and scale
+    mag = math.hypot(px, py)
+    if mag == 0:
+        return int(random.uniform(-50, 50)), int(random.uniform(-50, 50))
+    vx = -py / mag
+    vy = px / mag
+    # Scale velocity with inverse sqrt(distance) for variety but controlled magnitude
+    speed = speed_scale * (20000.0 / (math.sqrt(mag) + 1.0))
+    return int(vx * speed), int(vy * speed)
 
 # ----------------------
 # System generation
@@ -66,13 +50,11 @@ def generate_system(
     starting_planet_metal: int = 100,
     additional_planet_radius: int = 300,
     base_metal_value: int = 50,
-    base_orbital_distance: int = 25000,
-    orbital_distance_step: int = 10000,
     system_name: str | None = None,
     rng_seed: int | None = None
 ) -> Dict:
     """
-    Generate a PA Titans system as a Python dict with non-overlapping orbits.
+    Generate a PA Titans system as a Python dict.
     """
 
     if rng_seed is not None:
@@ -85,38 +67,27 @@ def generate_system(
         "name": system_name,
         "description": f"Procedural system with 2 starting planets and {num_additional_planets} additional",
         "version": "1.0",
-        "creator": "PA Titans System Generator",
-        "players": [2, 10],
         "planets": []
     }
 
-    total_planets = 2 + num_additional_planets
-    
-    # Calculate fixed orbital distances for all planets (no overlaps)
-    orbital_distances = [base_orbital_distance + i * orbital_distance_step for i in range(total_planets)]
-    
-    # Generate random but distinct orbital angles for each planet
-    orbital_angles = random.sample(range(0, 360, 10), total_planets)  # Sample every 10 degrees
-
-    # Create 2 starting planets at first two orbital shells
+    # Create 2 starting planets (symmetrically positioned)
+    starting_distance = 25000
     for i in range(2):
-        distance = orbital_distances[i]
-        angle = orbital_angles[i]
-        angle_rad = math.radians(angle)
-        
-        px = distance * math.cos(angle_rad)
-        py = distance * math.sin(angle_rad)
-        
-        # Calculate perpendicular velocity for stable orbit
-        vx, vy = perp_velocity(px, py, distance)
+        px = starting_distance * (1 if i == 0 else -1)
+        py = 0
+        # small orbit-like velocity for starting planets
+        vx, vy = perp_velocity(px, py, speed_scale=1.0)
+        # Slight sign flip so each faces opposite direction
+        if i == 1:
+            vx, vy = -vx, -vy
 
         planet = {
             "name": f"Starting Planet {i+1}",
             "mass": 10000,
-            "position_x": round(px, 2),
-            "position_y": round(py, 2),
-            "velocity_x": vx,
-            "velocity_y": vy,
+            "position_x": int(px),
+            "position_y": int(py),
+            "velocity_x": int(vx),
+            "velocity_y": int(vy),
             "required_thrust_to_move": 0,
             "starting_planet": True,
             "respawn": False,
@@ -124,77 +95,60 @@ def generate_system(
             "min_spawn_delay": 0,
             "max_spawn_delay": 0,
             "planet": {
-                "seed": random.randint(0, 999999),
+                "seed": random.randint(0, 100000),
                 "radius": starting_planet_radius,
                 "heightRange": 50,
                 "waterHeight": 0,
-                "waterDepth": 50,
+                "waterDepth": 0,
                 "temperature": 50,
                 "metalDensity": starting_planet_metal,
                 "metalClusters": 50,
                 "biomeScale": 50,
-                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal"]),
-                "symmetryType": "terrain and CSG",
-                "symmetricalMetal": True,
-                "symmetricalStarts": True,
-                "numArmies": 2,
-                "landingZonesPerArmy": 0,
-                "landingZoneSize": 0
-            },
-            "orbit": {
-                "distance": distance,
-                "period": round(distance / 1000, 1)
+                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal"])
             }
         }
         system["planets"].append(planet)
 
-    # Create additional resource planets at remaining orbital shells
+    # Create additional resource planets distributed around center
     for i in range(num_additional_planets):
-        distance = orbital_distances[i + 2]
-        angle = orbital_angles[i + 2]
-        angle_rad = math.radians(angle)
-        
         # Metal deviation ±10%
         metal_deviation = random.uniform(-0.1, 0.1)
         metal_amount = int(round(base_metal_value * (1 + metal_deviation)))
 
-        px = distance * math.cos(angle_rad)
-        py = distance * math.sin(angle_rad)
+        # Angle and radial distance
+        angle = random.uniform(0, 2 * math.pi)
+        distance = random.randint(35000, 50000)
 
-        # Perpendicular velocity for stable circular orbit
-        vx, vy = perp_velocity(px, py, distance)
+        px = distance * math.cos(angle)
+        py = distance * math.sin(angle)
 
-        # Determine planet type based on distance
-        planet_type = "Moon" if distance < base_orbital_distance * 2 else "Planet"
+        # Perpendicular velocity for orbit-like motion
+        vx, vy = perp_velocity(px, py, speed_scale=random.uniform(0.8, 1.2))
 
         planet = {
-            "name": f"Resource {planet_type} {i+1}",
-            "mass": 10000,
-            "position_x": round(px, 2),
-            "position_y": round(py, 2),
-            "velocity_x": vx,
-            "velocity_y": vy,
-            "required_thrust_to_move": 5,
+            "name": f"Resource Planet {i+1}",
+            "mass": 5000,
+            "position_x": int(px),
+            "position_y": int(py),
+            "velocity_x": int(vx),
+            "velocity_y": int(vy),
+            "required_thrust_to_move": 0,
             "starting_planet": False,
             "respawn": False,
             "start_destroyed": False,
             "min_spawn_delay": 0,
             "max_spawn_delay": 0,
             "planet": {
-                "seed": random.randint(0, 999999),
+                "seed": random.randint(0, 100000),
                 "radius": additional_planet_radius,
-                "heightRange": 35,
+                "heightRange": 50,
                 "waterHeight": 0,
-                "waterDepth": 50,
+                "waterDepth": 0,
                 "temperature": random.randint(0, 100),
                 "metalDensity": metal_amount,
                 "metalClusters": 40,
                 "biomeScale": 50,
-                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal", "gas"])
-            },
-            "orbit": {
-                "distance": distance,
-                "period": round(distance / 1000, 1)
+                "biome": random.choice(["earth", "desert", "lava", "moon", "tropical", "ice", "metal"])
             }
         }
         system["planets"].append(planet)
@@ -253,25 +207,17 @@ def create_zip_file(systems: List[Dict]) -> io.BytesIO:
 # Streamlit UI
 # ----------------------
 st.title("🌍 Planetary Annihilation: Titans System Generator")
-st.markdown("Generate balanced star systems with **non-overlapping orbits** for PA Titans. Files are saved as `.pas` (each contains a JSON array `[system]` required by PA).")
+st.markdown("Generate balanced star systems for PA Titans. Files are saved as `.pas` (each contains a JSON array `[system]` required by PA).")
 
 # Sidebar config
 st.sidebar.header("System Configuration")
 
 num_systems = st.sidebar.number_input("Number of Systems to Generate", min_value=1, max_value=50, value=5)
-num_additional = st.sidebar.selectbox("Additional Planets", options=[1, 3, 5, 7, 10], index=1)
-
-st.sidebar.subheader("Planet Properties")
+num_additional = st.sidebar.selectbox("Additional Planets", options=[1, 3, 5], index=1)
 starting_radius = st.sidebar.slider("Starting Planet Radius", min_value=200, max_value=800, value=400, step=50)
 starting_metal = st.sidebar.slider("Starting Planet Metal Density", min_value=50, max_value=150, value=100, step=10)
 additional_radius = st.sidebar.slider("Additional Planet Radius", min_value=150, max_value=600, value=300, step=50)
 base_metal = st.sidebar.slider("Base Metal Density (±10%)", min_value=20, max_value=100, value=50, step=5)
-
-st.sidebar.subheader("Orbital Configuration")
-base_distance = st.sidebar.number_input("Base Orbital Distance", min_value=10000, max_value=50000, value=25000, step=5000,
-                                        help="Distance of first orbital shell from center")
-distance_step = st.sidebar.number_input("Orbital Distance Step", min_value=5000, max_value=20000, value=10000, step=1000,
-                                        help="Distance between each orbital shell")
 
 use_custom_name = st.sidebar.checkbox("Use Custom System Name")
 custom_name_base = ""
@@ -290,14 +236,9 @@ if use_seed:
 col1, col2 = st.columns([2, 1])
 with col1:
     st.subheader("Configuration Summary")
-    total_planets_per_system = 2 + num_additional
-    max_distance = base_distance + (total_planets_per_system - 1) * distance_step
-    st.markdown(f"- Starting Planets: **2** (Radius: **{starting_radius}**, Metal: **{starting_metal}**)\n"
+    st.markdown(f"- Starting Planets: 2 (Radius: **{starting_radius}**, Metal: **{starting_metal}**)\n"
                 f"- Additional Planets: **{num_additional}** (Radius: **{additional_radius}**, Metal base: **{base_metal}**) \n"
-                f"- Total Planets per System: **{total_planets_per_system}**\n"
                 f"- Total Systems: **{num_systems}**\n"
-                f"- Orbital Range: **{base_distance:,}** to **{max_distance:,}** units\n"
-                f"- Orbital Spacing: **{distance_step:,}** units\n"
                 f"- Reproducible Seed: **{seed_val if use_seed else 'No'}**")
 
 with col2:
@@ -317,15 +258,13 @@ with col2:
                 starting_planet_metal=starting_metal,
                 additional_planet_radius=additional_radius,
                 base_metal_value=base_metal,
-                base_orbital_distance=base_distance,
-                orbital_distance_step=distance_step,
                 system_name=system_name,
                 rng_seed=rng
             )
             systems.append(system)
 
         st.session_state.generated_systems = systems
-        st.success(f"✅ Generated {len(systems)} systems with non-overlapping orbits")
+        st.success(f"✅ Generated {len(systems)} systems")
 
 # Display and downloads
 if 'generated_systems' in st.session_state:
@@ -341,26 +280,14 @@ if 'generated_systems' in st.session_state:
         with c1:
             st.markdown("**System Information**")
             st.json({"name": system['name'], "description": system['description'], "total_planets": len(system['planets'])})
-            
-            st.markdown("**Orbital Structure**")
-            for p in system['planets']:
-                orbit_info = p.get('orbit', {})
-                st.write(f"• {p['name']}: {orbit_info.get('distance', 'N/A'):,} units")
-                
         with c2:
             st.markdown("**Planet Details**")
             for p in system['planets']:
                 with st.expander(p['name']):
-                    orbit_info = p.get('orbit', {})
-                    st.write(f"**Orbital Distance:** {orbit_info.get('distance', 'N/A'):,} units")
-                    st.write(f"**Orbital Period:** {orbit_info.get('period', 'N/A')} (relative)")
-                    st.write(f"**Radius:** {p['planet']['radius']}")
-                    st.write(f"**Metal Density:** {p['planet']['metalDensity']}")
-                    st.write(f"**Biome:** {p['planet']['biome'].title()}")
-                    st.write(f"**Starting Planet:** {p.get('starting_planet', False)}")
-                    st.write(f"**Position:** ({p['position_x']:.0f}, {p['position_y']:.0f})")
-                    st.write(f"**Velocity:** ({p['velocity_x']}, {p['velocity_y']})")
-        
+                    st.write(f"Radius: {p['planet']['radius']}")
+                    st.write(f"Metal Density: {p['planet']['metalDensity']}")
+                    st.write(f"Biome: {p['planet']['biome']}")
+                    st.write(f"Starting Planet: {p.get('starting_planet', False)}")
         with st.expander("View full JSON"):
             st.json(system)
 
@@ -376,20 +303,20 @@ if 'generated_systems' in st.session_state:
                 mime="application/zip",
                 use_container_width=True
             )
-    with c2:
-        sel = st.selectbox("Download individual system", options=range(len(st.session_state.generated_systems)),
-                        format_func=lambda x: st.session_state.generated_systems[x]['name'],
-                        key="download_select")
-        sys_obj = st.session_state.generated_systems[sel]
-        json_str = json.dumps(sys_obj, indent=2)  # ← REMOVED array wrapper
-        filename = f"{sanitize_filename(sys_obj['name'])}.pas"
-        st.download_button(
-            label=f"⬇️ Download {sys_obj['name']}",
-            data=json_str,
-            file_name=filename,
-            mime="application/json",
-            use_container_width=True
-        )
+        with c2:
+            sel = st.selectbox("Download individual system", options=range(len(st.session_state.generated_systems)),
+                               format_func=lambda x: st.session_state.generated_systems[x]['name'],
+                               key="download_select")
+            sys_obj = st.session_state.generated_systems[sel]
+            json_str = json.dumps(sys_obj, indent=2)  # no array wrapper
+            filename = f"{sanitize_filename(sys_obj['name'])}.pas"
+            st.download_button(
+                label=f"⬇️ Download {sys_obj['name']}",
+                data=json_str,
+                file_name=filename,
+                mime="application/json",
+                use_container_width=True
+            )
 
 
 # Footer / Installation note
