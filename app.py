@@ -212,7 +212,7 @@ def create_zip_file(systems: List[Dict]) -> io.BytesIO:
         for i, system in enumerate(systems):
             safe_name = sanitize_filename(system.get("name", f"system_{i+1}"))
             filename = f"{safe_name}_{i+1}.pas"
-            json_str = json.dumps([system], indent=2)  # PA expects array wrapper
+            json_str = json.dumps(system, indent=2) 
             # write into generated_maps/pa/maps/
             zf.writestr(f"generated_maps/pa/maps/{filename}", json_str)
 
