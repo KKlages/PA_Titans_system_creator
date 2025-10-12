@@ -364,7 +364,7 @@ if 'generated_systems' in st.session_state:
                                key="download_select")
             sys_obj = st.session_state.generated_systems[sel]
             # Wrap as an array (PA expects system) and provide .pas extension
-            json_str = json.dumps([sys_obj], indent=2)
+            json_str = json.dumps(sys_obj, indent=2)
             filename = f"{sanitize_filename(sys_obj['name'])}.pas"
             st.download_button(
                 label=f"⬇️ Download {sys_obj['name']}",
