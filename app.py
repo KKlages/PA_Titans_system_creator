@@ -1,7 +1,7 @@
 # File: app.py
 """
 PA Titans System Generator (Streamlit)
-- Uses PlanetarySystemGenerator to produce stable .pas files (each file contains a JSON array: [system])
+- Uses PlanetarySystemGenerator to produce stable .pas files (each file contains a JSON array: system)
 - Adds required metadata fields (creator, players) and planet placeholders (planetCSG, landing_zones)
 - Distributes resource planets with angular spacing and perpendicular velocities for stable motion
 """
@@ -47,7 +47,7 @@ class PlanetarySystemGenerator:
         creator: str = "AutoGenerator",
         players: Tuple[int, int] = (2, 10),
     ) -> Dict:
-        """Generate a complete planetary system dict suitable for saving as .pas (wrapped later as [system])"""
+        """Generate a complete planetary system dict suitable for saving as .pas (wrapped later as system)"""
         system = {
             "name": f"{system_name} {num_starting_planets}+{num_resource_planets}",
             "description": f"Procedural system with {num_starting_planets} starting planets and {num_resource_planets} additional",
@@ -205,7 +205,7 @@ class PlanetarySystemGenerator:
 def create_zip_file(systems: List[Dict]) -> io.BytesIO:
     """
     Create a zip archive that contains systems as .pas files inside generated_maps/pa/maps/.
-    Each file contains a JSON array [system] as required by PA.
+    Each file contains a JSON array system as required by PA.
     """
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -252,7 +252,7 @@ def create_zip_file(systems: List[Dict]) -> io.BytesIO:
 # Streamlit UI
 # ----------------------
 st.title("🌍 Planetary Annihilation: Titans System Generator")
-st.markdown("Generate stable, PA-compatible `.pas` system files. Each .pas contains a JSON array `[system]` required by PA.")
+st.markdown("Generate stable, PA-compatible `.pas` system files. Each .pas contains a JSON array `system` required by PA.")
 
 # Sidebar config
 st.sidebar.header("System Configuration")
@@ -363,7 +363,7 @@ if 'generated_systems' in st.session_state:
                                format_func=lambda x: st.session_state.generated_systems[x]['name'],
                                key="download_select")
             sys_obj = st.session_state.generated_systems[sel]
-            # Wrap as an array (PA expects [system]) and provide .pas extension
+            # Wrap as an array (PA expects system) and provide .pas extension
             json_str = json.dumps([sys_obj], indent=2)
             filename = f"{sanitize_filename(sys_obj['name'])}.pas"
             st.download_button(
